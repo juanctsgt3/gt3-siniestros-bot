@@ -1,10 +1,8 @@
 services:
   - type: web
     name: gt3-siniestros-bot
-    env: python
-    buildCommand: ""
-    startCommand: python bot_gt3_siniestros.py
+    env: docker
+    plan: free
     envVars:
       - key: TELEGRAM_TOKEN
         value: 8117221184:AAEHOLFXRy567KRtHltbCTEx0rfb7fn7UKA
-    pythonVersion: 3.10.8
