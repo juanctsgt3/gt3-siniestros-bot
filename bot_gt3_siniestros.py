@@ -2,14 +2,13 @@ import asyncio
 import logging
 import datetime
 import pandas as pd
-from telegram import Update, Bot
+from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
 
 # ============ CONFIGURACIÓN ============
 TELEGRAM_TOKEN = '8117221184:AAEHOLFXRy567KRtHltbCTEx0rfb7fn7UKA'
 USER_ID = 704277362
-BOT = Bot(token=TELEGRAM_TOKEN)
 
 WEBS = {
     'PLC Auction': 'https://plc.auction/es/auction/from-de/porsche/911',
@@ -34,34 +33,21 @@ WEBS = {
     'Autovit.ro': 'https://www.autovit.ro/autoturisme/porsche/911/'
 }
 
-async def enviar_mensaje(texto):
-    try:
-        await BOT.send_message(chat_id=USER_ID, text=texto, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        logging.error(f"Error al enviar mensaje: {e}")
-
-async def resumen_diario():
+# ============ FUNCIONES ============
+async def resumen_diario() -> str:
     fecha = datetime.datetime.now().strftime("%d/%m/%Y")
     mensaje = f"✈️ <b>Resultados diarios GT3 siniestrados ({fecha})</b>\n"
     for nombre, url in WEBS.items():
         mensaje += f"• <b>{nombre}</b>: <a href='{url}'>ver resultados</a>\n"
     mensaje += "\n✅ Bot operativo 24/7. Te avisaré si aparece algo interesante."
-    await enviar_mensaje(mensaje)
-
-async def resumen_semanal():
-    hoy = datetime.date.today()
-    datos = [{'Web': nombre, 'URL': url, 'Fecha': hoy.strftime('%Y-%m-%d')} for nombre, url in WEBS.items()]
-    df = pd.DataFrame(datos)
-    archivo = '/mnt/data/gt3_siniestros_resumen.xlsx'
-    df.to_excel(archivo, index=False)
-    with open(archivo, 'rb') as f:
-        await BOT.send_document(chat_id=USER_ID, document=f, filename='gt3_siniestros_resumen.xlsx', caption='Resumen semanal Porsche GT3 siniestrados')
+    return mensaje
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🚀 Bot operativo. Puedes usar /prueba para ver el resumen diario.")
 
 async def prueba(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await resumen_diario()
+    mensaje = await resumen_diario()
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=mensaje, parse_mode=ParseMode.HTML)
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
