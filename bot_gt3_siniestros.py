@@ -2,8 +2,8 @@ import asyncio
 import logging
 import datetime
 import pandas as pd
-import schedule
-from telegram import Bot
+from telegram import Update, Bot
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from telegram.constants import ParseMode
 
 # ============ CONFIGURACIÓN ============
@@ -11,7 +11,6 @@ TELEGRAM_TOKEN = '8117221184:AAEHOLFXRy567KRtHltbCTEx0rfb7fn7UKA'
 USER_ID = 704277362
 BOT = Bot(token=TELEGRAM_TOKEN)
 
-# Enlaces de búsqueda
 WEBS = {
     'PLC Auction': 'https://plc.auction/es/auction/from-de/porsche/911',
     'Copart': 'https://www.copart.com/lotSearchResults',
@@ -34,8 +33,6 @@ WEBS = {
     'Otomoto.pl': 'https://www.otomoto.pl/osobowe/porsche/911/',
     'Autovit.ro': 'https://www.autovit.ro/autoturisme/porsche/911/'
 }
-
-# ============ FUNCIONES ============
 
 async def enviar_mensaje(texto):
     try:
@@ -60,17 +57,17 @@ async def resumen_semanal():
     with open(archivo, 'rb') as f:
         await BOT.send_document(chat_id=USER_ID, document=f, filename='gt3_siniestros_resumen.xlsx', caption='Resumen semanal Porsche GT3 siniestrados')
 
-async def run_bot():
-    await enviar_mensaje("🚀 Bot iniciado. Te avisaré cuando haya novedades sobre los GT3 siniestrados.")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🚀 Bot operativo. Puedes usar /prueba para ver el resumen diario.")
 
-    # Ejecutar tareas periódicas
-    while True:
-        now = datetime.datetime.now()
-        if now.strftime('%H:%M') == '08:00':
-            await resumen_diario()
-        if now.strftime('%A') == 'Sunday' and now.strftime('%H:%M') == '20:00':
-            await resumen_semanal()
-        await asyncio.sleep(60)
+async def prueba(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await resumen_diario()
+
+def main():
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("prueba", prueba))
+    app.run_polling()
 
 if __name__ == '__main__':
-    asyncio.run(run_bot())
+    main()
