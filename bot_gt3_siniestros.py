@@ -1,15 +1,15 @@
+import asyncio
 import logging
-import telegram
-import schedule
-import time
 import datetime
 import pandas as pd
+import schedule
+from telegram import Bot
 from telegram.constants import ParseMode
 
 # ============ CONFIGURACIÓN ============
 TELEGRAM_TOKEN = '8117221184:AAEHOLFXRy567KRtHltbCTEx0rfb7fn7UKA'
 USER_ID = 704277362
-BOT = telegram.Bot(token=TELEGRAM_TOKEN)
+BOT = Bot(token=TELEGRAM_TOKEN)
 
 # Enlaces de búsqueda
 WEBS = {
@@ -36,35 +36,41 @@ WEBS = {
 }
 
 # ============ FUNCIONES ============
-def enviar_mensaje(texto):
+
+async def enviar_mensaje(texto):
     try:
-        BOT.send_message(chat_id=USER_ID, text=texto, parse_mode=ParseMode.HTML)
+        await BOT.send_message(chat_id=USER_ID, text=texto, parse_mode=ParseMode.HTML)
     except Exception as e:
         logging.error(f"Error al enviar mensaje: {e}")
 
-def resumen_diario():
+async def resumen_diario():
     fecha = datetime.datetime.now().strftime("%d/%m/%Y")
     mensaje = f"✈️ <b>Resultados diarios GT3 siniestrados ({fecha})</b>\n"
     for nombre, url in WEBS.items():
         mensaje += f"• <b>{nombre}</b>: <a href='{url}'>ver resultados</a>\n"
     mensaje += "\n✅ Bot operativo 24/7. Te avisaré si aparece algo interesante."
-    enviar_mensaje(mensaje)
+    await enviar_mensaje(mensaje)
 
-def resumen_semanal():
+async def resumen_semanal():
     hoy = datetime.date.today()
     datos = [{'Web': nombre, 'URL': url, 'Fecha': hoy.strftime('%Y-%m-%d')} for nombre, url in WEBS.items()]
     df = pd.DataFrame(datos)
     archivo = '/mnt/data/gt3_siniestros_resumen.xlsx'
     df.to_excel(archivo, index=False)
     with open(archivo, 'rb') as f:
-        BOT.send_document(chat_id=USER_ID, document=f, filename='gt3_siniestros_resumen.xlsx', caption='Resumen semanal Porsche GT3 siniestrados')
+        await BOT.send_document(chat_id=USER_ID, document=f, filename='gt3_siniestros_resumen.xlsx', caption='Resumen semanal Porsche GT3 siniestrados')
 
-# ============ SCHEDULER ============
-schedule.every().day.at("08:00").do(resumen_diario)
-schedule.every().sunday.at("20:00").do(resumen_semanal)
+async def run_bot():
+    await enviar_mensaje("🚀 Bot iniciado. Te avisaré cuando haya novedades sobre los GT3 siniestrados.")
 
-enviar_mensaje("🚀 Bot iniciado. Te avisaré cuando haya novedades sobre los GT3 siniestrados.")
+    # Ejecutar tareas periódicas
+    while True:
+        now = datetime.datetime.now()
+        if now.strftime('%H:%M') == '08:00':
+            await resumen_diario()
+        if now.strftime('%A') == 'Sunday' and now.strftime('%H:%M') == '20:00':
+            await resumen_semanal()
+        await asyncio.sleep(60)
 
-while True:
-    schedule.run_pending()
-    time.sleep(60)
+if __name__ == '__main__':
+    asyncio.run(run_bot())
